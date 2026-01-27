@@ -46,8 +46,20 @@ jobs:
 
           # IMPORTANT: clean build under cov-build to ensure full capture
           rm -rf cov-int
+
           "${TOOL_DIR}bin/cov-build" --dir cov-int \
-            ./mvnw -B -DskipTests=true clean compile
+            ./mvnw -B -DskipTests=true \
+            -Dmaven.compiler.fork=true \
+            -Dmaven.compiler.forceJavacCompilerUse=true \
+            clean compile
+
+            echo "=== Maven exit code was: $? ==="
+            echo "=== cov-int contents ==="
+            ls -la cov-int || true
+            echo "=== build-log tail ==="
+            tail -n 200 cov-int/build-log.txt || true
+            echo "=== cli diagnostics ==="
+            ls -la cov-int/*diagnostics*.json || true
 
           # Package results for upload
           tar -czf oshi.tgz cov-int
@@ -60,4 +72,13 @@ jobs:
             --form version="oshi/coverity_scan" \
             --form description="Oshi Coverity Scan" \
             "https://scan.coverity.com/builds?project=oshi%2Foshi"
+
+      - name: Upload Coverity logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverity-capture-logs
+          path: |
+            cov-int/build-log.txt
+            cov-int/*diagnostics*.json
 
